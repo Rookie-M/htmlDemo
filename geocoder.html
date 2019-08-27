@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+        <title>批量地理编码</title>
+        <link rel="stylesheet" href="https://a.amap.com/jsapi_demos/static/demo-center/css/demo-center.css" />
+        <style>
+            html,
+            body,
+            #container {
+                height: 100%;
+                width: 100%;
+            }
+
+            .btn {
+                width: 10rem;
+                margin-left: 6.8rem;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container"></div>
+        <div class="input-card" style='width:28rem;'>
+            <h4 style='color:grey'>地址：</h4>
+                <input type="file" id="file">
+            <a href="javascript:void(0)" id="export">导出</a>
+        </div>
+        <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=7599d7d94f2e51747a9eda0699a66bcf&plugin=AMap.Geocoder"></script>
+        <script type="text/javascript" src="./xlsx.full.min.js"></script>
+        <script type="text/javascript" src="./imex_port.js"></script>
+        <script type="text/javascript">
+            var file = document.getElementById("file");
+            var exp = document.getElementById("export");
+            var resData = [];
+            file.onchange = function () {
+                var _this = this;
+                // 需要注意要导入的Excel文件最好把数据格式转为文本格式
+                imExPortPlugin.import({
+                    "dom": _this,// 导入文件时的input dom
+                    "format": [
+                        { "old": "小区名称", "new": "CommunityName" },
+                        { "old": "收件人姓名", "new": "RecipientName" },
+                        { "old": "收货地址", "new": "ShippingAddress" },
+                        { "old": "组名称", "new": "GroupName" },
+                        { "old": "团长ID", "new": "HeadID" },
+                        { "old": "状态", "new": "Status" },
+                    ],
+                    "success": function (res) {
+                        console.log("最终结果", res)
+                        for(var i = 0; i < res.length; i++){
+                            geoCode(res[i])
+                        }
+                    }//导入成功后的回调
+                })
+            }
+            // 将所有点显示到地图上
+            var map = new AMap.Map("container", {
+                resizeEnable: true
+            });
+            var start = new AMap.Marker({
+                map: map,
+                draggable: true,
+                position: new AMap.LngLat(121.300129, 30.732878)
+            });
+            var geocoder, markers = [];
+            function geoCode(addresses) {
+                if (!geocoder) {
+                    geocoder = new AMap.Geocoder({
+                    });
+                }
+                map.remove(markers);
+                markers = [];
+                // var addresses = document.getElementById('address').value.trim().split('\n');
+                geocoder.getLocation(addresses.ShippingAddress, (status, result) => {
+                    if (status === 'complete' && result.geocodes.length) {
+                        var location = new AMap.Marker({
+                            map: map,
+                            draggable: true,
+                            position: new AMap.LngLat(result.geocodes[0].location.lng, result.geocodes[0].location.lat)
+                        });
+                        var marker = new AMap.Marker({
+                            position: result.geocodes[0].location
+                        });
+                        markers.push(marker);
+                        var line = new AMap.Polyline({
+                            map: map,
+                            strokeColor: '#80d8ff',
+                            isOutline: true,
+                            outlineColor: 'white',
+                            path: [start.getPosition(), location.getPosition()]
+                        });
+                        var text = new AMap.Text({
+                            text: '两点相距' + Math.round(start.getPosition().distance(location.getPosition())) + '米',
+                            position: start.getPosition().divideBy(2).add(location.getPosition().divideBy(2)),
+                            map: map,
+                            style: {
+                                'background-color': '#29b6f6',
+                                'border-color': '#e1f5fe',
+                                'font-size': '12px'
+                            }
+                        })
+                        map.add(markers);
+                        map.setFitView(markers);
+                        addresses.Distance = Math.round(start.getPosition().distance(location.getPosition()))
+                        resData.push(addresses)
+                    }else{
+                        console.log(status,result)
+                    }
+                    return addresses
+                });
+            }
+            //计算两点距离
+            
+            // function computeDis(mark1) {
+                
+            // }
+            exp.onclick = function () {
+                console.log(resData)
+                var _this = this;
+                imExPortPlugin.export({
+                    "data": resData,
+                    "format": [
+                        { "old": "CommunityName", "new": "小区名称" },
+                        { "old": "RecipientName", "new": "收件人姓名" },
+                        { "old": "ShippingAddress", "new": "收货地址" },
+                        { "old": "GroupName", "new": "组名称" },
+                        { "old": "HeadID", "new": "团长ID" },
+                        { "old": "Status", "new": "状态" },
+                        { "old": "Status", "new": "状态" },
+                        { "old": "Distance", "new": "距离" }
+                    ],
+                    "dom": _this,
+                    "filename": "测试文件.xlsx",
+                    "success": function () {
+                        console.log("导出成功")
+                    }
+                })
+                }
+        </script>
+    </body>
+</html>
