@@ -19,11 +19,16 @@
             width: 10rem;
             margin-left: 6.8rem;
         }
+        .info{
+            background-color: '#29b6f6';
+            border-color: '#e1f5fe';
+            font-size: '12px';
+        }
     </style>
 </head>
 
 <body>
-    <div id="container"></div>
+    <!-- <div id="container"></div>
     <div class="input-card" style='width:28rem;'>
         <label style='color:grey'>地理编码，根据地址获取经纬度坐标</label>
         <div class="input-item">
@@ -35,46 +40,53 @@
             <input id='lnglat' disabled type="text">
         </div>
         <input id="geo" type="button" class="btn" value="地址 -> 经纬度" />
+    </div> -->
+    <div id="container"></div>
+    <div class="input-card" style='width:28rem;'>
+        <h4 style='color:grey'>地址：</h4>
+        <input type="file" id="file">
+        <a href="javascript:void(0)" id="export">导出</a>
     </div>
     <script src="https://a.amap.com/jsapi_demos/static/demo-center/js/demoutils.js"></script>
     <script type="text/javascript"
         src="https://webapi.amap.com/maps?v=1.4.15&key=7599d7d94f2e51747a9eda0699a66bcf&plugin=AMap.Geocoder"></script>
+    <script type="text/javascript" src="groupAddressData.json"></script>
     <script type="text/javascript">
         var map = new AMap.Map("container", {
             resizeEnable: true
         });
-
-        var geocoder, marker;
-        function geoCode() {
+        console.log(data)
+        var geocoder, markers = [];
+        function geoCode(addresses) {
             if (!geocoder) {
                 geocoder = new AMap.Geocoder({
                     //city: "010", //城市设为北京，默认：“全国”
                 });
             }
-            var address = document.getElementById('address').value;
-            geocoder.getLocation(address, function (status, result) {
-                if (status === 'complete' && result.geocodes.length) {
-                    var lnglat = result.geocodes[0].location
-                    document.getElementById('lnglat').value = lnglat;
-                    if (!marker) {
-                        marker = new AMap.Marker();
-                        map.add(marker);
-                    }
-                    marker.setPosition(lnglat);
-                    map.setFitView(marker);
-                } else {
-                    log.error('根据地址查询位置失败');
+            map.remove(markers);
+            markers = [];
+            geocoder.getLocation(addresses.ShippingAddress, function (status, result) {
+                // console.log(addresses.CommunityName)
+                // console.log(result.geocodes.length)
+                 if (status === 'complete' && result.geocodes.length) {
+                    var marker = new AMap.Marker({
+                        position: result.geocodes[0].location
+                    });
+                    markers.push(marker);
+                    marker.setLabel({
+                        offset: new AMap.Pixel(20, 20),  //设置文本标注偏移量
+                        content: addresses.CommunityName,
+                        direction: 'top' //设置文本标注方位
+                    });
+                    map.add(markers);
+                    map.setFitView(markers);
                 }
+
             });
         }
-        document.getElementById("geo").onclick = geoCode;
-        document.getElementById('address').onkeydown = function (e) {
-            if (e.keyCode === 13) {
-                geoCode();
-                return false;
-            }
-            return true;
-        };
+        for (var i = 0; i < data.length; i++) {
+            geoCode(data[i])
+        }
     </script>
 </body>
 

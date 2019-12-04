@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+        <title>批量地理解析</title>
+        <link rel="stylesheet" href="https://a.amap.com/jsapi_demos/static/demo-center/css/demo-center.css" />
+        <style>
+            html,
+            body,
+            #container {
+                height: 100%;
+                width: 100%;
+            }
+
+            .btn {
+                width: 10rem;
+                margin-left: 6.8rem;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container"></div>
+        <div class="input-card" style='width:28rem;'>
+            <h4 style='color:grey'>地址：</h4>
+                <input type="file" id="file">
+            <a href="javascript:void(0)" id="export">导出</a>
+        </div>
+        <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=7599d7d94f2e51747a9eda0699a66bcf&plugin=AMap.Geocoder"></script>
+        <script type="text/javascript" src="./xlsx.full.min.js"></script>
+        <script type="text/javascript" src="./imex_port.js"></script>
+        <script type="text/javascript">
+            var file = document.getElementById("file");
+            var exp = document.getElementById("export");
+            var resData = [];
+            file.onchange = function () {
+                var _this = this;
+                // 需要注意要导入的Excel文件最好把数据格式转为文本格式
+                imExPortPlugin.import({
+                    "dom": _this,// 导入文件时的input dom
+                    "format": [
+                        // { "old": "小区名称", "new": "CommunityName" },
+                        // { "old": "收件人姓名", "new": "RecipientName" },
+                        // { "old": "收货地址", "new": "ShippingAddress" },
+                        // { "old": "组名称", "new": "GroupName" },
+                        // { "old": "团长ID", "new": "HeadID" },
+                        // { "old": "团长昵称", "new": "NickName" },
+                        // { "old": "审核时间", "new": "ReviewTime" },
+                        // { "old": "状态", "new": "Status" },
+                        // { "old": "自提点ID", "new": "PickupPointID" },
+                        // { "old": "地址", "new": "ShippingAddress" },
+                        // { "old": "自提点名称", "new": "CommunityName" },
+                        { "old": "自提点ID", "new": "PickupPointID" },
+                        { "old": "团长名称", "new": "NickName" },
+                        { "old": "自提点名称", "new": "ShippingAddress" },
+                        { "old": "自提点分组", "new": "PickupGroup" },
+                    ],
+                    "success": function (res) {
+                        console.log("最终结果", res)
+                        for(var i = 0; i < res.length; i++){
+                            geoCode(res[i])
+                        }
+                    }//导入成功后的回调
+                })
+            }
+            var map = new AMap.Map("container", {
+                resizeEnable: true
+            });
+            var geocoder, markers = [];
+            function geoCode(addresses) {
+                if (!geocoder) {
+                    geocoder = new AMap.Geocoder({
+                        city: "0431", //城市设为长春，默认：“全国”
+                        // city: "0515", //城市设为盐城，默认：“全国”
+                        // city: "0518", //城市设为连云港，默认：“全国”
+                    });
+                }
+                map.remove(markers);
+                markers = [];
+                geocoder.getLocation(addresses.ShippingAddress, function (status, result) {
+                    // console.log(addresses.CommunityName)
+                    // console.log(result.geocodes)
+                    if (status === 'complete' && result.geocodes.length) {
+                        var marker = new AMap.Marker({
+                            position: result.geocodes[0].location
+                        });
+                        markers.push(marker);
+                        marker.setLabel({
+                            offset: new AMap.Pixel(20, 20),  //设置文本标注偏移量
+                            content: addresses.NickName,
+                            direction: 'top' //设置文本标注方位
+                        });
+                        map.add(markers);
+                        map.setFitView(markers);
+                        addresses.lat = result.geocodes[0].location.lat;
+                        addresses.lng = result.geocodes[0].location.lng;
+                        addresses.sku = 1;
+                        resData.push(addresses);
+                    }
+
+                });
+            }
+            exp.onclick = function () {
+                console.log(resData)
+                var _this = this;
+                imExPortPlugin.export({
+                    "data": resData,
+                    "format": [
+                        // { "old": "CommunityName", "new": "小区名称" },
+                        // { "old": "RecipientName", "new": "收件人姓名" },
+                        // { "old": "ShippingAddress", "new": "收货地址" },
+                        // { "old": "GroupName", "new": "组名称" },
+                        // { "old": "HeadID", "new": "团长ID" },
+                        // { "old": "Status", "new": "状态" },
+                        // { "old": "Status", "new": "状态" },
+                        // { "old": "Distance", "new": "距离" }
+                        { "old": "ShippingAddress", "new": "小区名称" },
+                        { "old": "sku", "new": "sku" },
+                        { "old": "lng", "new": "经度" },
+                        { "old": "lat", "new": "纬度" },
+                    ],
+                    "dom": _this,
+                    "filename": "ch-dataGroup.xlsx",
+                    // "filename": "yc-dataGroup.xlsx",
+                    // "filename": "lyg-dataGroup.xlsx",
+                    "success": function () {
+                        console.log("导出成功")
+                    }
+                })
+            }
+        </script>
+    </body>
+</html>

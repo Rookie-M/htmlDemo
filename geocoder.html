@@ -25,7 +25,7 @@
         <div class="input-card" style='width:28rem;'>
             <h4 style='color:grey'>地址：</h4>
                 <input type="file" id="file">
-            <a href="javascript:void(0)" id="export">导出</a>
+            <!-- <a href="javascript:void(0)" id="export">导出</a> -->
         </div>
         <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=7599d7d94f2e51747a9eda0699a66bcf&plugin=AMap.Geocoder"></script>
         <script type="text/javascript" src="./xlsx.full.min.js"></script>
@@ -40,11 +40,14 @@
                 imExPortPlugin.import({
                     "dom": _this,// 导入文件时的input dom
                     "format": [
+                        { "old": "自提点ID", "new": "PickupPointID" },
                         { "old": "小区名称", "new": "CommunityName" },
                         { "old": "收件人姓名", "new": "RecipientName" },
                         { "old": "收货地址", "new": "ShippingAddress" },
                         { "old": "组名称", "new": "GroupName" },
                         { "old": "团长ID", "new": "HeadID" },
+                        { "old": "团长昵称", "new": "NickName" },
+                        { "old": "审核时间", "new": "ReviewTime" },
                         { "old": "状态", "new": "Status" },
                     ],
                     "success": function (res) {
@@ -59,6 +62,7 @@
             var map = new AMap.Map("container", {
                 resizeEnable: true
             });
+            // 总仓地点
             var start = new AMap.Marker({
                 map: map,
                 draggable: true,
@@ -74,6 +78,7 @@
                 markers = [];
                 // var addresses = document.getElementById('address').value.trim().split('\n');
                 geocoder.getLocation(addresses.ShippingAddress, (status, result) => {
+                    console.log(status, result)
                     if (status === 'complete' && result.geocodes.length) {
                         var location = new AMap.Marker({
                             map: map,
