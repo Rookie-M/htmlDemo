@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>读取CSV文件</title>
+</head>
+
+<body>
+    <div class="uploadFile border_bg">
+        <form action="" method="post" id="formToUpdate">
+            <div class="form-group">
+                <label><strong>Import from csv</strong></label>
+                <input type="file" name="uploadCSV" id="upCsv" multiple="multiple">
+                <input id="ajaxSubmit" type="button" value="upload CSV" class="btn">
+            </div>
+        </form>
+    </div>
+    <!-- <div style="border:2px solid #666;width:49%;height:450px;float:left" id="chartmain"></div> -->
+</body>
+<!-- <script type="text/javascript" src="./jquery-1.11.3.min.js"></script> -->
+<!-- <script type="text/javascript" src="./xlsx.core.min.js"></script> -->
+<script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.js"></script>
+<script src="echarts.js"></script>
+<script>
+    $("#ajaxSubmit").click(function (e) {
+        var fileType = $('#upCsv').val().split('.');
+        var files = document.getElementById("upCsv").files;
+        // $("#ajaxSubmit").attr("disabled", "disabled");
+        // 多文件数据
+        // 判断上传的文件类型
+        if ((fileType[fileType.length - 1]) === 'csv' || (fileType[fileType.length - 1]) === 'CSV') {
+            var filesObj1 = {
+                name: '',
+                firstRowData: [],// 第一行数据
+                firstColData: [],// 第一列数据
+                overRowData: [],// 剩余行数据
+                ovarColData: [],// 剩余列数据
+                colDataArr: [],// 列数据
+            }
+            var files = document.getElementById("upCsv").files;
+            // console.log(files)
+            if (files.length) {
+                readFile(files).then(res => {
+                    console.log('处理完的数据', res);
+                })
+            }
+        } else {
+            alert("请上传.csv");
+            $("#ajaxSubmit").removeAttr("disabled");
+        }
+        function readFile(files){
+            return new Promise((resolve, reject) => {
+
+                if (typeof FileReader == 'undefined') {
+                    alert("你的浏览器暂不支持该功能", { title: "提示", skin: "layui-layer-molv" });
+                    // file.setAttribute("disabled", "disabled");
+                    return;
+                }
+                var filesData = [];// 最后的数据
+                for (var fileIndex = 0; fileIndex < files.length; fileIndex++) {
+                    let filesObj = Object.assign({}, filesObj1);
+                    let data = [];// 首次处理后的数据
+                    filesObj.name = files[fileIndex].name;// 文件名
+                    var reader = new FileReader(); //new一个FileReader实例
+                    reader.readAsText(files[fileIndex]);
+                    reader.onload = function () {
+                        // console.log('首次读取的数据\n',this.result)
+                        // 把字符数据放到数组
+                        var relArr = this.result.split("\r\n");
+                        if (!$.isEmptyObject(relArr) && relArr.length > 1) {
+                            for (var key = 0; key < relArr.length; key++) {
+                                var values = relArr[key];
+                                if (!$.isEmptyObject(values)) {
+                                    var objArr = values.split(",");
+                                    data.push(objArr);
+                                }
+                            }
+                        }
+                        // console.log('把数据放到数组里\n',data);
+                        /*
+                            1、提取第一行数据
+                            2、提取第一列数据
+                            【注】剩下的数据就是每列的数据
+                        */
+                        /* 
+                            1、提取第一行数据
+                        */
+                        filesObj.firstRowData = data.slice(0, 1);// 第一行数据
+                        filesObj.overRowData = data.slice(1, data.length - 1);// 剩余行数据
+                        // console.log('第一行数据\n', filesObj.firstRowData);
+                        // console.log('剩余行数据\n', filesObj.overRowData);
+                        // 行转列数据
+                        //Array.from() 方法的使用，
+                        filesObj.colDataArr = Array.from(filesObj.overRowData, (item, index) => {
+                            // console.log(item)
+                            let arrList = [];
+                            filesObj.overRowData.forEach(item => {
+                                if (item[index]) {
+                                    arrList.push(item[index]);
+                                }
+                            })
+                            return arrList;
+                        })
+                        // 去除空数据
+                        filesObj.colDataArr.forEach((item, index) => {
+                            if (!item.length) {
+                                filesObj.colDataArr.splice(index)
+                            }
+                        })
+                        // console.log('列数据\n', filesObj.colDataArr);
+                        // 去除外层数组
+                        // colDataArr.forEach((item,index)=> {
+                        //     colDataArr[index] = item.join(',')
+                        // });
+                        /*
+                            2、提取第一列数据
+                        */
+                        filesObj.firstColData = filesObj.colDataArr.slice(0, 1);// 第一列数据
+                        filesObj.ovarColData = filesObj.colDataArr.slice(1, filesObj.colDataArr.length - 1); // 剩余列数据
+                        // console.log('第一列数据\n', filesObj.firstColData);
+                        // console.log('剩余列数据\n', filesObj.ovarColData);
+                        filesData.push(filesObj);
+                        // console.log('处理完的数据', filesData);
+                    }
+                }
+                resolve(filesData)
+            })
+        }
+    })
+</script>
+
+</html>
